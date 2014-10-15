@@ -18,6 +18,7 @@ from game import Directions
 import random, util
 
 from game import Agent
+from twisted.internet.defer import succeed
 
 class ReflexAgent(Agent):
     """
@@ -70,12 +71,34 @@ class ReflexAgent(Agent):
         # Useful information you can extract from a GameState (pacman.py)
         successorGameState = currentGameState.generatePacmanSuccessor(action)
         newPos = successorGameState.getPacmanPosition()
+        oldPos = currentGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
+        oldFood = currentGameState.getFood()
+        
+        newFoodCount = 0
+        oldFoodCount = 0
+        for i in range(len(newFood.asList())):
+            x,y = newFood.asList()[i]
+            if newFood[x][y] == True:
+                dist = manhattanDistance(newPos, (x,y))
+                newFoodCount += (dist)
+        for i in range(len(oldFood.asList())):
+            x,y = oldFood.asList()[i]
+            if oldFood[x][y] == True:
+                dist = manhattanDistance(oldPos, (x,y))
+                oldFoodCount += (1/dist)
+        
         newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        oldGhostStates = currentGameState.getGhostStates()
+        newGhostDist = 0
 
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        for x in newGhostStates:
+            newGhostDist += manhattanDistance(x.getPosition(), newPos)
+        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        oldScaredTimes = [ghostState.scaredTimer for ghostState in oldGhostStates]
+    
+        
+        return  10 * (successorGameState.getScore() ) + 100 * (1/newFoodCount) + newGhostDist 
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -129,8 +152,35 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        
+        dict = {}
+        actions = gameState.getLegalActions(self.index)
+        for action in actions:
+            z = self.minmax(self.depth - 1, gameState.generateSuccessor(self.index , action), self.index + 1 )
+            dict[z] = action
+        return dict[max(dict)]
+        
+    def minmax(self, depth, gameState, index):
+        if index >= gameState.getNumAgents():
+            index = 0
+        if(depth < 0 or len(gameState.getLegalActions(index)) == 0):
+            return self.evaluationFunction(gameState)
+        elif(index == 0):
+            v = float("-inf")
+            
+            for action in gameState.getLegalActions(index):
+    
+                v = max(v, self.minmax(depth - 1, gameState.generateSuccessor(index , action), index + 1))
+            return v
+        else:
+            v = float("inf")
+            for action in gameState.getLegalActions(index):
+               
+                v = min(v, self.minmax(depth - 1, gameState.generateSuccessor(index , action), index + 1))
+            
+            return v    
+                 
+         
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
